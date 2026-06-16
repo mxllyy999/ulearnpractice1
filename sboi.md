@@ -44,3 +44,4 @@ classDiagram
     ReportMaker ..> Failure : использует
     ReportMaker ..> Device : использует
     Failure --> FailureType : содержит
+```
