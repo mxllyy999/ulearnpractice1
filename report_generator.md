@@ -5,25 +5,29 @@
 
 Система подготовки статистических сводок по погодным измерениям. Производит вычисление показателей (среднее значение, стандартное отклонение, медиана) для двух метрик (температура и влажность) и формирует вывод в HTML и Markdown.
 
-IStatisticsEngine - задает метод Compute для расчета показателей
+StatisticsResult - абстрактный класс, задает метод Format для форматирования результата вычислений.
 
-MeanStdEngine - обсчитывает среднее и отклонение, реализует IStatisticsEngine
+MeanAndStdResult - содержит Mean и Std, реализует StatisticsResult, метод Format возвращает строку со средним и стандартным отклонением.
 
-MedianEngine - находит медиану ряда, реализует IStatisticsEngine
+MedianResult - содержит Median, реализует StatisticsResult, метод Format возвращает строку с медианой.
 
-IOutputRenderer - определяет методы RenderHeader, RenderListStart, RenderEntry, RenderListEnd для построения вывода
+IStatisticsCalculator - интерфейс, задает метод Calculate для расчета показателей, возвращает StatisticsResult.
 
-HtmlOutputRenderer - формирует HTML-разметку, реализует IOutputRenderer
+MeanStdCalculator - обсчитывает среднее и стандартное отклонение, реализует IStatisticsCalculator, возвращает MeanAndStdResult.
 
-MarkdownOutputRenderer - формирует Markdown-разметку, реализует IOutputRenderer
+MedianCalculator - находит медиану ряда, реализует IStatisticsCalculator, возвращает MedianResult.
 
-ReportGenerator - связывает рендерер и вычислитель, метод Generate создает отчет
+IReportRenderer - определяет методы RenderHeader, RenderListStart, RenderEntry, RenderListEnd для построения вывода.
 
-ReportHelper - предоставляет четыре готовых метода: MeanStdHtml, MedianHtml, MeanStdMarkdown, MedianMarkdown
+HtmlRenderer - формирует HTML-разметку, реализует IReportRenderer.
 
-Measurement - содержит Temperature и Humidity
+MarkdownRenderer - формирует Markdown-разметку, реализует IReportRenderer.
 
-MeanAndStd - содержит Mean и Std
+ReportGenerator - связывает рендерер и вычислитель, метод Generate создает отчет.
+
+ReportFactory - предоставляет четыре статических метода: CreateHtmlMeanStd, CreateHtmlMedian, CreateMarkdownMeanStd, CreateMarkdownMedian для создания готовых генераторов отчетов.
+
+Measurement - содержит Temperature и Humidity.
 ## 2. Диаграмма классов (Mermaid)
 
 ```mermaid
@@ -35,17 +39,28 @@ classDiagram
         +double Humidity
     }
 
-    class MeanAndStd {
+    class StatisticsResult {
+        <<abstract>>
+        +string Format()
+    }
+
+    class MeanAndStdResult {
         +double Mean
         +double Std
+        +string Format()
     }
 
-    class IStatisticsEngine {
+    class MedianResult {
+        +double Median
+        +string Format()
+    }
+
+    class IStatisticsCalculator {
         <<interface>>
-        +Compute(IEnumerable~double~) object
+        +Calculate(IEnumerable~double~) StatisticsResult
     }
 
-    class IOutputRenderer {
+    class IReportRenderer {
         <<interface>>
         +RenderHeader(string) string
         +RenderListStart() string
@@ -53,57 +68,59 @@ classDiagram
         +RenderListEnd() string
     }
 
-    class HtmlOutputRenderer {
+    class HtmlRenderer {
         +RenderHeader(string) string
         +RenderListStart() string
         +RenderEntry(string, string) string
         +RenderListEnd() string
     }
 
-    class MarkdownOutputRenderer {
+    class MarkdownRenderer {
         +RenderHeader(string) string
         +RenderListStart() string
         +RenderEntry(string, string) string
         +RenderListEnd() string
     }
 
-    class MeanStdEngine {
-        +Compute(IEnumerable~double~) object
+    class MeanStdCalculator {
+        +Calculate(IEnumerable~double~) StatisticsResult
     }
 
-    class MedianEngine {
-        +Compute(IEnumerable~double~) object
+    class MedianCalculator {
+        +Calculate(IEnumerable~double~) StatisticsResult
     }
 
     class ReportGenerator {
-        -IOutputRenderer _renderer
-        -IStatisticsEngine _engine
-        +ReportGenerator(IOutputRenderer, IStatisticsEngine)
+        -IReportRenderer _renderer
+        -IStatisticsCalculator _calculator
+        +ReportGenerator(IReportRenderer, IStatisticsCalculator)
         +Generate(IEnumerable~Measurement~, string) string
     }
 
-    class ReportHelper {
+    class ReportFactory {
         <<static>>
-        +MeanStdHtml(IEnumerable~Measurement~) string
-        +MedianHtml(IEnumerable~Measurement~) string
-        +MeanStdMarkdown(IEnumerable~Measurement~) string
-        +MedianMarkdown(IEnumerable~Measurement~) string
+        +CreateHtmlMeanStd() ReportGenerator
+        +CreateHtmlMedian() ReportGenerator
+        +CreateMarkdownMeanStd() ReportGenerator
+        +CreateMarkdownMedian() ReportGenerator
     }
 
-    IOutputRenderer <|.. HtmlOutputRenderer
-    IOutputRenderer <|.. MarkdownOutputRenderer
-    IStatisticsEngine <|.. MeanStdEngine
-    IStatisticsEngine <|.. MedianEngine
-    
-    ReportGenerator --> IOutputRenderer : использует
-    ReportGenerator --> IStatisticsEngine : использует
+    IReportRenderer <|.. HtmlRenderer
+    IReportRenderer <|.. MarkdownRenderer
+    IStatisticsCalculator <|.. MeanStdCalculator
+    IStatisticsCalculator <|.. MedianCalculator
+    StatisticsResult <|.. MeanAndStdResult
+    StatisticsResult <|.. MedianResult
+
+    ReportGenerator --> IReportRenderer : использует
+    ReportGenerator --> IStatisticsCalculator : использует
     ReportGenerator ..> Measurement : обрабатывает
+
+    IStatisticsCalculator ..> StatisticsResult : возвращает
     
-    MeanStdEngine ..> MeanAndStd : возвращает
-    
-    ReportHelper ..> ReportGenerator : создает
-    ReportHelper ..> HtmlOutputRenderer : создает
-    ReportHelper ..> MarkdownOutputRenderer : создает
-    ReportHelper ..> MeanStdEngine : создает
-    ReportHelper ..> MedianEngine : создает
+    ReportFactory ..> ReportGenerator : создает
+    ReportFactory ..> HtmlRenderer : создает
+    ReportFactory ..> MarkdownRenderer : создает
+    ReportFactory ..> MeanStdCalculator : создает
+    ReportFactory ..> MedianCalculator : создает
 ```
