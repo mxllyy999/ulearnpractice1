@@ -44,7 +44,9 @@ classDiagram
     }
 
     class Interaction {
-        +Make(Player, object)
+        +Make(Player, IOwnable)
+        +Make(Player, IGuarded, IRewarded)
+        +Make(Player, IRewarded)
     }
 
     class Army {
@@ -57,66 +59,77 @@ classDiagram
 
     class IOwnable {
         <<interface>>
-        +Owner: int
+        +SetOwner(int)
+        +GetOwner(): int
     }
 
     class IGuarded {
         <<interface>>
-        +Army: Army
+        +GetArmy(): Army
+        +IsDefeated(): bool
     }
 
     class IRewarded {
         <<interface>>
-        +Treasure: Treasure
+        +GetTreasure(): Treasure
+        +Collect(): Treasure
     }
 
     class Dwelling {
-        +Owner: int
+        -owner: int
+        +SetOwner(int)
+        +GetOwner(): int
     }
 
     class Mine {
-        +Owner: int
-        +Army: Army
-        +Treasure: Treasure
+        -owner: int
+        -army: Army
+        -treasure: Treasure
+        +SetOwner(int)
+        +GetOwner(): int
+        +GetArmy(): Army
+        +IsDefeated(): bool
+        +GetTreasure(): Treasure
+        +Collect(): Treasure
     }
 
     class Creeps {
-        +Army: Army
-        +Treasure: Treasure
+        -army: Army
+        -treasure: Treasure
+        +GetArmy(): Army
+        +IsDefeated(): bool
+        +GetTreasure(): Treasure
+        +Collect(): Treasure
     }
 
     class Wolves {
-        +Army: Army
+        -army: Army
+        +GetArmy(): Army
+        +IsDefeated(): bool
     }
 
     class ResourcePile {
-        +Treasure: Treasure
+        -treasure: Treasure
+        +GetTreasure(): Treasure
+        +Collect(): Treasure
     }
 
-    %% реализация интерфейсов
-    IOwnable <|.. Dwelling : присваивает владельца
-    IOwnable <|.. Mine : присваивает владельца
+    IOwnable <|.. Dwelling
+    IOwnable <|.. Mine
 
-    IGuarded <|.. Wolves : защищает территорию
-    IGuarded <|.. Mine : охраняется армией
+    IGuarded <|.. Wolves
+    IGuarded <|.. Mine
+    IGuarded <|.. Creeps
 
-    IRewarded <|.. ResourcePile : даёт награду
-    IRewarded <|.. Mine : содержит награду
-    IRewarded <|.. Creeps : награждает после победы
+    IRewarded <|.. ResourcePile
+    IRewarded <|.. Mine
+    IRewarded <|.. Creeps
 
-    %% взаимодействия
-    Interaction ..> Player : управляет игроком
+    Interaction ..> Player : управляет
     Interaction ..> IOwnable : назначает владельца
     Interaction ..> IGuarded : проверяет бой
     Interaction ..> IRewarded : выдаёт награду
 
     Player ..> Army : сравнивает силу
     Player ..> Treasure : получает ресурсы
-
-    Interaction ..> Mine : обрабатывает объект
-    Interaction ..> Creeps : обрабатывает объект
-    Interaction ..> Wolves : обрабатывает объект
-
-    Mine ..> Player : взаимодействует с игроком
-    Creeps ..> Player : взаимодействует с игроком
 ```
