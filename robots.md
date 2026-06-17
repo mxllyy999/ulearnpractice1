@@ -113,9 +113,8 @@ classDiagram
     
     IMoveCommand <|-- IShooterMoveCommand : расширяет
     
-    ShooterAction ..|> IMoveCommand : implements
-    ShooterAction ..|> IShooterMoveCommand : implements
-    BuilderAction ..|> IMoveCommand : implements
+    ShooterAction ..|> IShooterMoveCommand : реализует
+    BuilderAction ..|> IMoveCommand : реализует
     
     ShooterAction --> Point : содержит
     BuilderAction --> Point : содержит
