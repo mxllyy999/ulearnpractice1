@@ -2,99 +2,70 @@
 
 ## 1. Описание предметной области и сущностей
 
+Система подготовки статистических сводок по погодным измерениям.
+Производит вычисление статистических показателей (среднее значение и стандартное отклонение, медиана) для двух метрик (температура и влажность) и формирует отчёты в HTML и Markdown форматах.
 
-Система подготовки статистических сводок по погодным измерениям. Производит вычисление показателей (среднее значение, стандартное отклонение, медиана) для двух метрик (температура и влажность) и формирует вывод в HTML и Markdown.
+Measurement - содержит данные измерений температуры и влажности.
 
-StatisticsResult - абстрактный класс, задает метод Format для форматирования результата вычислений.
+IStatisticsCalculator - интерфейс вычисления статистики, определяет метод Calculate, возвращающий результат расчёта.
 
-MeanAndStdResult - содержит Mean и Std, реализует StatisticsResult, метод Format возвращает строку со средним и стандартным отклонением.
+MeanStdCalculator - вычисляет среднее значение и стандартное отклонение, реализует IStatisticsCalculator.
 
-MedianResult - содержит Median, реализует StatisticsResult, метод Format возвращает строку с медианой.
+MedianCalculator - вычисляет медиану набора данных, реализует IStatisticsCalculator.
 
-IStatisticsCalculator - интерфейс, задает метод Calculate для расчета показателей, возвращает StatisticsResult.
+IReportRenderer - интерфейс формирования отчёта, определяет методы для создания заголовка, списка и элементов отчёта.
 
-MeanStdCalculator - обсчитывает среднее и стандартное отклонение, реализует IStatisticsCalculator, возвращает MeanAndStdResult.
+HtmlRenderer - формирует отчёт в формате HTML, реализует IReportRenderer.
 
-MedianCalculator - находит медиану ряда, реализует IStatisticsCalculator, возвращает MedianResult.
+MarkdownRenderer - формирует отчёт в формате Markdown, реализует IReportRenderer.
 
-IReportRenderer - определяет методы RenderHeader, RenderListStart, RenderEntry, RenderListEnd для построения вывода.
+ReportContext - содержит выбранные стратегии: рендерер отчёта и вычислитель статистики, обеспечивает их совместное использование.
 
-HtmlRenderer - формирует HTML-разметку, реализует IReportRenderer.
+ReportGenerator - формирует итоговый отчёт, используя ReportContext, обрабатывает список измерений и вызывает рендерер и вычислитель.
 
-MarkdownRenderer - формирует Markdown-разметку, реализует IReportRenderer.
-
-ReportGenerator - связывает рендерер и вычислитель, метод Generate создает отчет.
-
-ReportFactory - предоставляет четыре статических метода: CreateHtmlMeanStd, CreateHtmlMedian, CreateMarkdownMeanStd, CreateMarkdownMedian для создания готовых генераторов отчетов.
-
-Measurement - содержит Temperature и Humidity.
+ReportFactory - предоставляет методы создания готовых конфигураций ReportGenerator для HTML и Markdown отчётов с разными типами статистики.
 ## 2. Диаграмма классов (Mermaid)
 
 ```mermaid
 classDiagram
     direction LR
 
-    class Measurement {
-        +double Temperature
-        +double Humidity
+    class ReportContext {
+        -renderer : IReportRenderer
+        -calculator : IStatisticsCalculator
+        +ReportContext(IReportRenderer, IStatisticsCalculator)
+        +Renderer()
+        +Calculator()
     }
 
-    class StatisticsResult {
-        <<abstract>>
-        +string Format()
-    }
-
-    class MeanAndStdResult {
-        +double Mean
-        +double Std
-        +string Format()
-    }
-
-    class MedianResult {
-        +double Median
-        +string Format()
-    }
-
-    class IStatisticsCalculator {
-        <<interface>>
-        +Calculate(IEnumerable~double~) StatisticsResult
+    class ReportGenerator {
+        -context : ReportContext
+        +ReportGenerator(ReportContext)
+        +Generate(IEnumerable~Measurement~, string) string
     }
 
     class IReportRenderer {
         <<interface>>
-        +RenderHeader(string) string
-        +RenderListStart() string
-        +RenderEntry(string, string) string
-        +RenderListEnd() string
+        +MakeCaption(string) string
+        +BeginList() string
+        +MakeItem(string, string) string
+        +EndList() string
     }
 
-    class HtmlRenderer {
-        +RenderHeader(string) string
-        +RenderListStart() string
-        +RenderEntry(string, string) string
-        +RenderListEnd() string
+    class IStatisticsCalculator {
+        <<interface>>
+        +Calculate(IEnumerable~double~) object
     }
 
-    class MarkdownRenderer {
-        +RenderHeader(string) string
-        +RenderListStart() string
-        +RenderEntry(string, string) string
-        +RenderListEnd() string
-    }
+    class HtmlRenderer
+    class MarkdownRenderer
 
-    class MeanStdCalculator {
-        +Calculate(IEnumerable~double~) StatisticsResult
-    }
+    class MeanAndStdCalculator
+    class MedianCalculator
 
-    class MedianCalculator {
-        +Calculate(IEnumerable~double~) StatisticsResult
-    }
-
-    class ReportGenerator {
-        -IReportRenderer _renderer
-        -IStatisticsCalculator _calculator
-        +ReportGenerator(IReportRenderer, IStatisticsCalculator)
-        +Generate(IEnumerable~Measurement~, string) string
+    class Measurement {
+        +Temperature : double
+        +Humidity : double
     }
 
     class ReportFactory {
@@ -105,22 +76,21 @@ classDiagram
         +CreateMarkdownMedian() ReportGenerator
     }
 
-    IReportRenderer <|.. HtmlRenderer
-    IReportRenderer <|.. MarkdownRenderer
-    IStatisticsCalculator <|.. MeanStdCalculator
-    IStatisticsCalculator <|.. MedianCalculator
-    StatisticsResult <|.. MeanAndStdResult
-    StatisticsResult <|.. MedianResult
+    IReportRenderer <|.. HtmlRenderer : реализует интерфейс рендеринга HTML
+    IReportRenderer <|.. MarkdownRenderer : реализует интерфейс рендеринга Markdown
 
-    ReportGenerator --> IReportRenderer : использует
-    ReportGenerator --> IStatisticsCalculator : использует
-    ReportGenerator ..> Measurement : обрабатывает
+    IStatisticsCalculator <|.. MeanAndStdCalculator : считает среднее и стандартное отклонение
+    IStatisticsCalculator <|.. MedianCalculator : считает медиану
 
-    IStatisticsCalculator ..> StatisticsResult : возвращает
-    
-    ReportFactory ..> ReportGenerator : создает
-    ReportFactory ..> HtmlRenderer : создает
-    ReportFactory ..> MarkdownRenderer : создает
-    ReportFactory ..> MeanStdCalculator : создает
-    ReportFactory ..> MedianCalculator : создает
+    ReportContext o-- IReportRenderer : содержит рендерер отчёта
+    ReportContext o-- IStatisticsCalculator : содержит калькулятор статистики
+
+    ReportGenerator --> ReportContext : использует конфигурацию отчёта
+    ReportGenerator ..> Measurement : обрабатывает данные измерений
+
+    ReportFactory ..> ReportGenerator : создаёт генератор отчётов
+    ReportFactory ..> HtmlRenderer : создаёт HTML рендерер
+    ReportFactory ..> MarkdownRenderer : создаёт Markdown рендерер
+    ReportFactory ..> MeanAndStdCalculator : создаёт калькулятор среднего и отклонения
+    ReportFactory ..> MedianCalculator : создаёт калькулятор медианы
 ```
