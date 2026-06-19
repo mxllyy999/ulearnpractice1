@@ -1,94 +1,101 @@
 # Практика: Дифференцирование
 
 ## 1. Описание предметной области и сущностей
-Algebra - основной класс дифференцирования выражений. Разбирает Expression Tree и строит производную с использованием правил сложения, умножения и цепного правила.
+Algebra - основной класс символьного дифференцирования. Анализирует дерево выражений и строит производную по набору правил.
 
-ExpressionNode - абстрактное выражение дерева, базовый элемент всех типов выражений.
+ExpressionElement - абстрактный элемент дерева выражений, общий предок всех узлов.
 
-ConstantExpression - числовая константа, производная равна 0.
+ConstantExpression - узел числовой константы, производная всегда равна 0.
 
-ParameterExpression - переменная функции (x), производная равна 1.
+ParameterExpression - узел переменной функции, производная по себе равна 1.
 
-BinaryExpression - бинарное выражение (сложение, вычитание, умножение).
+BinaryExpression - бинарная операция над двумя выражениями (сложение, вычитание, умножение).
 
-UnaryExpression - унарное выражение (например Convert), используется для раскрытия вложенных конструкций.
+MethodCallExpression - вызов математической функции, для которой применяется соответствующее правило дифференцирования.
 
-MethodCallExpression - вызов математической функции (Sin, Cos и др.).
+DerivativeEngine - выполняет обработку узлов выражения и выбирает нужное правило вычисления производной.
 
-MemberExpression - доступ к членам выражения (например ToString, Length), приводит к ошибке.
+IDerivativeRule - интерфейс правила дифференцирования отдельного типа выражений.
 
-MathFunctions - содержит поддерживаемые математические функции Sin и Cos.
+ConstantRule - правило для констант.
 
-ExpressionKind — перечисление типов операций выражения.
+ParameterRule - правило для переменных.
+
+BinaryRule - правило для бинарных операций.
+
+TrigonometricRule - правило для тригонометрических функций Sin и Cos.
+
+ExpressionCategory — перечисление категорий узлов дерева выражений.
 ## 2. Диаграмма классов (Mermaid)
 ```mermaid
 classDiagram
-    direction LR
+    direction TB
 
     class Algebra {
         <<static>>
-        +Differentiate(function Expression~Func~double,double~~) Expression~Func~double,double~~
-        -DifferentiateExpr(expr Expression, x ParameterExpression) Expression
-        -DifferentiateAdd(BinaryExpression, x ParameterExpression) Expression
-        -DifferentiateSub(BinaryExpression, x ParameterExpression) Expression
-        -DifferentiateMul(BinaryExpression, x ParameterExpression) Expression
-        -DifferentiateMethodCall(MethodCallExpression, x ParameterExpression) Expression
-        -DifferentiateUnary(UnaryExpression, x ParameterExpression) Expression
+        +Differentiate(Expression~Func~double,double~~) Expression~Func~double,double~~
+        -DifferentiateExpr(Expression, ParameterExpression) Expression
+        -DifferentiateAdd(BinaryExpression, ParameterExpression) Expression
+        -DifferentiateSub(BinaryExpression, ParameterExpression) Expression
+        -DifferentiateMul(BinaryExpression, ParameterExpression) Expression
+        -DifferentiateMethodCall(MethodCallExpression, ParameterExpression) Expression
         -Throw(Expression) Expression
     }
 
-    class ExpressionNode {
+    class Expression {
         <<abstract>>
+        +NodeType
     }
 
-    class ConstantExpression
-    class ParameterExpression
-    class BinaryExpression
-    class MethodCallExpression
-    class UnaryExpression
-    class MemberExpression
-
-    class MathFunctions {
-        <<static>>
-        +Sin(double) double
-        +Cos(double) double
+    class ConstantExpression {
+        +Value
     }
 
-    class ExpressionKind {
+    class ParameterExpression {
+        +Name
+    }
+
+    class BinaryExpression {
+        +Left
+        +Right
+    }
+
+    class MethodCallExpression {
+        +Method
+        +Arguments
+    }
+
+    class ExpressionType {
         <<enumeration>>
         Add
         Subtract
         Multiply
         Call
-        Convert
         Constant
         Parameter
     }
 
-  
-    ExpressionNode <|-- ConstantExpression : наследует
-    ExpressionNode <|-- ParameterExpression : наследует
-    ExpressionNode <|-- BinaryExpression : наследует
-    ExpressionNode <|-- MethodCallExpression : наследует
-    ExpressionNode <|-- UnaryExpression : наследует
-    ExpressionNode <|-- MemberExpression : наследует
+    class Func~double,double~ {
+        <<delegate>>
+    }
 
+    Expression <|-- ConstantExpression : наследует
+    Expression <|-- ParameterExpression : наследует
+    Expression <|-- BinaryExpression : наследует
+    Expression <|-- MethodCallExpression : наследует
 
-    BinaryExpression *-- ExpressionNode : left/right operands
-    UnaryExpression *-- ExpressionNode : operand
-    MethodCallExpression *-- ExpressionNode : argument
-    MemberExpression *-- ExpressionNode : inner expression
+    BinaryExpression o-- Expression : левый операнд
+    BinaryExpression o-- Expression : правый операнд
 
-    Algebra ..> ExpressionNode : анализирует выражение
-    Algebra ..> ParameterExpression : определяет переменную x
-    Algebra ..> BinaryExpression : применяет правило цепочки
-    Algebra ..> MethodCallExpression : sin/cos обработка
-    Algebra ..> UnaryExpression : Convert unwrap
-    Algebra ..> MemberExpression : обработка ToString/Length
+    MethodCallExpression o-- Expression : аргументы вызова
 
-    Algebra ..> MathFunctions : использует для дифференцирования
+    Algebra ..> Expression : анализирует дерево выражений
+    Algebra ..> BinaryExpression : применяет правила дифференцирования
+    Algebra ..> MethodCallExpression : обрабатывает функции
+    Algebra ..> ParameterExpression : определяет переменную
 
-    ExpressionKind ..> BinaryExpression : тип операции
-    ExpressionKind ..> UnaryExpression : тип преобразования
-    ExpressionKind ..> MethodCallExpression : вызов функции
+    Algebra ..> ExpressionType : проверяет вид узла
+    Algebra ..> Func~double,double~ : возвращает производную
+
+    Expression --> ExpressionType : определяет категорию узла
 ```
