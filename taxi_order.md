@@ -2,105 +2,85 @@
 
 ## 1. Описание предметной области и сущностей
 
-TaxiService - сервис управления поездками такси. Создаёт новые поездки, назначает и снимает водителей, изменяет маршрут и переводит поездку между этапами выполнения.
+TaxiService - основной сервис управления поездками. Создаёт заказы, назначает водителей, изменяет маршрут и переводит поездку между состояниями.
 
-Ride - Основная сущность поездки. Хранит информацию о пассажире, маршруте, назначенном водителе, текущем состоянии и истории выполнения заказа.
+Ride - сущность поездки. Хранит информацию о пассажире, маршруте, назначении водителя, текущем состоянии и истории выполнения.
 
-Passenger - пассажир, который оформил поездку. Содержит персональные данные клиента.
+Passenger - пассажир, оформивший поездку.
 
-Driver - водитель такси. Хранит сведения о человеке и используемом автомобиле.
+Driver - водитель такси. Содержит персональные данные и сведения об автомобиле.
 
-DriverAssignment - объект назначения водителя на поездку. Содержит ссылку на водителя и время назначения.
+DriverAssignment - информация о назначении водителя на поездку. Хранит ссылку на водителя и время назначения.
 
-Route - маршрут поездки. Описывает начальную и конечную точки следования.
+Route - маршрут поездки, содержащий точку отправления и точку назначения.
 
-RideTimeline - история жизненного цикла поездки. Содержит даты создания, назначения водителя, начала, завершения или отмены поездки.
+RideTimeline - история жизненного цикла поездки. Содержит даты основных событий заказа.
 
-DriverCatalog - источник данных о водителях. Используется для поиска и получения информации о доступных водителях.
+DriverCatalog - источник данных о водителях. Используется для поиска водителя по идентификатору.
 
-TripWorkflow - компонент бизнес-логики переходов между состояниями поездки. Отвечает за правила назначения, отмены, начала и завершения поездки.
+TripWorkflow - компонент управления состояниями поездки. Выполняет переходы между этапами выполнения заказа.
 
 Vehicle - автомобиль водителя.
 
-PersonName - фамилия и имя человека.
+PersonName - имя и фамилия человека.
 
-Location - адресная точка маршрута.
+Location - адрес маршрута.
 
-TripStage - перечисление этапов жизненного цикла поездки
+TripStage - перечисление состояний поездки.
 
 ## 2. Диаграмма классов (Mermaid)
 ```mermaid
 classDiagram
     direction LR
 
-    class TaxiService {
-        -DriverCatalog catalog
-        -TripWorkflow workflow
+    class TaxiApi {
+        -DriversRepository repo
+        -TaxiOrderWorkflow workflow
         -Func~DateTime~ clock
 
-        +CreateRide(...)
-        +AssignDriver(ride, driverId)
-        +ChangeDestination(ride, street, building)
-        +CancelRide(ride)
-        +StartRide(ride)
-        +FinishRide(ride)
+        +CreateOrderWithoutDestination(...)
+        +AssignDriver(order, driverId)
+        +UpdateDestination(order, street, building)
+        +Cancel(order)
+        +StartRide(order)
+        +FinishRide(order)
     }
 
-    class Ride {
-        +int Number
-        -Passenger passenger
-        -Route route
+    class TaxiOrder {
+        +int Id
+
+        -PersonName client
+        -Address route
         -DriverAssignment assignment
-        -RideTimeline timeline
-        -TripStage stage
+        -OrderTimeline timeline
+        -TaxiOrderStatus status
 
-        +UpdateRoute(Route)
-        +Assign(Driver)
-        +Unassign()
-    }
-
-    class Passenger {
-        +PersonName Name
+        +UpdateDestination(Address)
+        +AssignDriver(Driver)
+        +UnassignDriver()
     }
 
     class Driver {
         +PersonName Name
-        +Vehicle Vehicle
+        +Car Car
     }
 
     class DriverAssignment {
-        +Driver AssignedDriver
+        +Driver Driver
         +DateTime AssignedAt
     }
 
-    class Route {
-        +Location StartPoint
-        +Location DestinationPoint
+    class OrderTimeline {
+        +DateTime CreationTime
+        +DateTime DriverAssignmentTime
+        +DateTime StartRideTime
+        +DateTime FinishRideTime
+        +DateTime CancelTime
     }
 
-    class RideTimeline {
-        +DateTime CreatedAt
-        +DateTime AssignedAt
-        +DateTime StartedAt
-        +DateTime FinishedAt
-        +DateTime CancelledAt
-    }
-
-    class DriverCatalog {
-        +FindDriver(int) Driver
-    }
-
-    class TripWorkflow {
-        +Assign(Ride)
-        +Cancel(Ride)
-        +Start(Ride)
-        +Finish(Ride)
-    }
-
-    class Vehicle {
-        +string Model
-        +string Color
-        +string Registration
+    class Address {
+        +string Street
+        +string Building
     }
 
     class PersonName {
@@ -108,37 +88,56 @@ classDiagram
         +string LastName
     }
 
-    class Location {
-        +string Street
-        +string Building
+    class Car {
+        +string Model
+        +string Color
+        +string PlateNumber
     }
 
-    class TripStage {
+    class DriversRepository {
+        +GetDriverById(int) DriverInfo
+    }
+
+    class DriverInfo {
+        +string FirstName
+        +string LastName
+        +string CarModel
+        +string CarColor
+        +string CarPlateNumber
+    }
+
+    class TaxiOrderWorkflow {
+        +Assign(TaxiOrder)
+        +Cancel(TaxiOrder)
+        +Start(TaxiOrder)
+        +Finish(TaxiOrder)
+    }
+
+    class TaxiOrderStatus {
         <<enumeration>>
-        Created
-        Assigned
-        Active
+        WaitingForDriver
+        WaitingCarArrival
+        InProgress
         Finished
-        Cancelled
+        Canceled
     }
 
-    TaxiService --> DriverCatalog : ищет водителей
-    TaxiService --> TripWorkflow : меняет состояние
-    TaxiService --> Ride : управляет поездкой
+    TaxiApi --> DriversRepository : получает водителей
+    TaxiApi --> TaxiOrderWorkflow : изменяет состояние
+    TaxiApi --> TaxiOrder : управляет заказом
 
-    Ride *-- Passenger : клиент
-    Ride *-- Route : маршрут
-    Ride *-- RideTimeline : история
-    Ride o-- DriverAssignment : назначение
+    TaxiOrder *-- OrderTimeline : история заказа
+    TaxiOrder *-- PersonName : клиент
+
+    TaxiOrder o-- Address : адреса
+    TaxiOrder o-- DriverAssignment : назначение
 
     DriverAssignment --> Driver : водитель
 
-    Driver *-- Vehicle : автомобиль
-    Driver *-- PersonName : данные
+    Driver *-- PersonName : ФИО
+    Driver *-- Car : автомобиль
 
-    Passenger *-- PersonName : данные
+    DriversRepository ..> DriverInfo : данные водителя
 
-    Route *-- Location : точки маршрута
-
-    Ride --> TripStage : текущее состояние
+    TaxiOrder --> TaxiOrderStatus : состояние
 ```
