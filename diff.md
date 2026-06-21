@@ -1,31 +1,23 @@
 # Практика: Дифференцирование
 
 ## 1. Описание предметной области и сущностей
-Algebra - основной класс символьного дифференцирования. Анализирует дерево выражений и строит производную по набору правил.
+Algebra - основной класс символьного дифференцирования. Выполняет анализ дерева выражений и строит выражение производной по правилам математического дифференцирования.
 
-ExpressionElement - абстрактный элемент дерева выражений, общий предок всех узлов.
+Expression - абстрактный базовый класс для всех узлов дерева выражений.
 
-ConstantExpression - узел числовой константы, производная всегда равна 0.
+ConstantExpression - узел числовой константы. При дифференцировании возвращает нулевое значение.
 
-ParameterExpression - узел переменной функции, производная по себе равна 1.
+ParameterExpression - узел переменной функции. Производная переменной по самой себе равна единице.
 
-BinaryExpression - бинарная операция над двумя выражениями (сложение, вычитание, умножение).
+UnaryExpression - узел унарной операции над выражением. Используется для обработки преобразований и отрицания.
 
-MethodCallExpression - вызов математической функции, для которой применяется соответствующее правило дифференцирования.
+BinaryExpression - узел бинарной операции над двумя выражениями. Представляет сложение, вычитание и умножение.
 
-DerivativeEngine - выполняет обработку узлов выражения и выбирает нужное правило вычисления производной.
+MethodCallExpression - узел вызова функции. Используется для обработки математических функций и применения правила цепочки.
 
-IDerivativeRule - интерфейс правила дифференцирования отдельного типа выражений.
+Math - библиотечный класс математических функций. Используется для построения производных функций Sin и Cos.
 
-ConstantRule - правило для констант.
-
-ParameterRule - правило для переменных.
-
-BinaryRule - правило для бинарных операций.
-
-TrigonometricRule - правило для тригонометрических функций Sin и Cos.
-
-ExpressionCategory — перечисление категорий узлов дерева выражений.
+ExpressionCategory - перечисление категорий узлов дерева выражений.
 ## 2. Диаграмма классов (Mermaid)
 ```mermaid
 classDiagram
@@ -33,13 +25,14 @@ classDiagram
 
     class Algebra {
         <<static>>
-        +Differentiate(Expression~Func~double,double~~) Expression~Func~double,double~~
-        -DifferentiateExpr(Expression, ParameterExpression) Expression
-        -DifferentiateAdd(BinaryExpression, ParameterExpression) Expression
-        -DifferentiateSub(BinaryExpression, ParameterExpression) Expression
-        -DifferentiateMul(BinaryExpression, ParameterExpression) Expression
-        -DifferentiateMethodCall(MethodCallExpression, ParameterExpression) Expression
-        -Throw(Expression) Expression
+        +Differentiate(...)
+        -DifferentiateExpr(...)
+        -DifferentiateUnary(...)
+        -DifferentiateAdd(...)
+        -DifferentiateSub(...)
+        -DifferentiateMul(...)
+        -DifferentiateMethodCall(...)
+        -Throw(...)
     }
 
     class Expression {
@@ -55,6 +48,10 @@ classDiagram
         +Name
     }
 
+    class UnaryExpression {
+        +Operand
+    }
+
     class BinaryExpression {
         +Left
         +Right
@@ -65,37 +62,29 @@ classDiagram
         +Arguments
     }
 
-    class ExpressionType {
-        <<enumeration>>
-        Add
-        Subtract
-        Multiply
-        Call
-        Constant
-        Parameter
+    class Math {
+        <<framework>>
     }
 
-    class Func~double,double~ {
-        <<delegate>>
-    }
+    Expression <|-- ConstantExpression : является видом
+    Expression <|-- ParameterExpression : является видом
+    Expression <|-- UnaryExpression : является видом
+    Expression <|-- BinaryExpression : является видом
+    Expression <|-- MethodCallExpression : является видом
 
-    Expression <|-- ConstantExpression : наследует
-    Expression <|-- ParameterExpression : наследует
-    Expression <|-- BinaryExpression : наследует
-    Expression <|-- MethodCallExpression : наследует
+    UnaryExpression o-- Expression : использует операнд
 
-    BinaryExpression o-- Expression : левый операнд
-    BinaryExpression o-- Expression : правый операнд
+    BinaryExpression o-- Expression : содержит левую часть
+    BinaryExpression o-- Expression : содержит правую часть
 
-    MethodCallExpression o-- Expression : аргументы вызова
+    MethodCallExpression o-- Expression : содержит параметры вызова
 
-    Algebra ..> Expression : анализирует дерево выражений
-    Algebra ..> BinaryExpression : применяет правила дифференцирования
-    Algebra ..> MethodCallExpression : обрабатывает функции
-    Algebra ..> ParameterExpression : определяет переменную
+    MethodCallExpression ..> Math : обращается к Sin и Cos
 
-    Algebra ..> ExpressionType : проверяет вид узла
-    Algebra ..> Func~double,double~ : возвращает производную
-
-    Expression --> ExpressionType : определяет категорию узла
+    Algebra ..> Expression : выполняет рекурсивный разбор
+    Algebra ..> ConstantExpression : обрабатывает константы
+    Algebra ..> ParameterExpression : вычисляет производную переменной
+    Algebra ..> UnaryExpression : раскрывает преобразования
+    Algebra ..> BinaryExpression : применяет правила операций
+    Algebra ..> MethodCallExpression : использует правило цепочки
 ```
